@@ -47,50 +47,62 @@ export async function getCurrentUser(event: H3Event) {
   } else if (authorization) {
     // Handle if authenticating using Header
     const [method, value] = authorization.split(' ');
-    // Support Basic Authentication
-    // TODO: support personal access token or similar
-    if (method !== 'Basic' || !value) {
+
+    if (method === 'Bearer' && value) {
+      // Support Bearer Token (API Key) Authentication
+      const apiKey = await Database.apiKeys.validate(value);
+
+      if (!apiKey) {
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'Invalid or expired API key',
+        });
+      }
+
+      user = await Database.users.get(apiKey.userId);
+    } else if (method === 'Basic' && value) {
+      // Support Basic Authentication
+      const basicValue = Buffer.from(value, 'base64').toString('utf-8');
+
+      // Split by first ":"
+      const index = basicValue.indexOf(':');
+      const username = basicValue.substring(0, index);
+      const password = basicValue.substring(index + 1);
+
+      if (!username || !password) {
+        throw createError({
+          statusCode: 400,
+          statusMessage: 'Invalid Basic Authorization',
+        });
+      }
+
+      // TODO: timing can be used to enumerate usernames
+
+      const foundUser = await Database.users.getByUsername(username);
+
+      if (!foundUser) {
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'Session failed',
+        });
+      }
+
+      const userHashPassword = foundUser.password;
+      const passwordValid = await isPasswordValid(password, userHashPassword);
+
+      if (!passwordValid) {
+        throw createError({
+          statusCode: 401,
+          statusMessage: 'Session failed',
+        });
+      }
+      user = foundUser;
+    } else {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Invalid Basic Authorization',
+        statusMessage: 'Invalid Authorization header',
       });
     }
-
-    const basicValue = Buffer.from(value, 'base64').toString('utf-8');
-
-    // Split by first ":"
-    const index = basicValue.indexOf(':');
-    const username = basicValue.substring(0, index);
-    const password = basicValue.substring(index + 1);
-
-    if (!username || !password) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid Basic Authorization',
-      });
-    }
-
-    // TODO: timing can be used to enumerate usernames
-
-    const foundUser = await Database.users.getByUsername(username);
-
-    if (!foundUser) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Session failed',
-      });
-    }
-
-    const userHashPassword = foundUser.password;
-    const passwordValid = await isPasswordValid(password, userHashPassword);
-
-    if (!passwordValid) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Session failed',
-      });
-    }
-    user = foundUser;
   } else {
     throw createError({
       statusCode: 401,
