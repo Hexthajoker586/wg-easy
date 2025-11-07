@@ -5,6 +5,7 @@ import debug from 'debug';
 import { eq } from 'drizzle-orm';
 
 import * as schema from './schema';
+import { ApiKeyService } from './repositories/apiKey/service';
 import { ClientService } from './repositories/client/service';
 import { GeneralService } from './repositories/general/service';
 import { UserService } from './repositories/user/service';
@@ -35,6 +36,7 @@ export async function connect() {
 }
 
 class DBService {
+  apiKeys: ApiKeyService;
   clients: ClientService;
   general: GeneralService;
   users: UserService;
@@ -44,6 +46,7 @@ class DBService {
   oneTimeLinks: OneTimeLinkService;
 
   constructor(db: DBType) {
+    this.apiKeys = new ApiKeyService(db);
     this.clients = new ClientService(db);
     this.general = new GeneralService(db);
     this.users = new UserService(db);
