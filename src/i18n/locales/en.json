@@ -20,7 +20,18 @@
     "2faKey": "TOTP Key",
     "2faCodeDesc": "Enter the code from your authenticator app.",
     "disable2fa": "Disable Two Factor Authentication",
-    "disable2faDesc": "Enter your password to disable Two Factor Authentication."
+    "disable2faDesc": "Enter your password to disable Two Factor Authentication.",
+    "apiKeysDesc": "API keys allow you to access the WireGuard API programmatically. Use Bearer token authentication with your API key.",
+    "createApiKey": "Create API Key",
+    "apiKeyName": "API Key Name",
+    "apiKeyNamePlaceholder": "My Application",
+    "apiKeyCreated": "API Key Created Successfully",
+    "apiKeyCopyWarning": "Make sure to copy your API key now. You won't be able to see it again!",
+    "apiKey": "API Key",
+    "existingApiKeys": "Existing API Keys",
+    "noApiKeys": "You don't have any API keys yet.",
+    "createdAt": "Created",
+    "lastUsedAt": "Last used"
   },
   "general": {
     "name": "Name",
@@ -41,7 +52,8 @@
     "confirmPassword": "Confirm Password",
     "loading": "Loading...",
     "2fa": "Two Factor Authentication",
-    "2faCode": "TOTP Code"
+    "2faCode": "TOTP Code",
+    "apiKeys": "API Keys"
   },
   "setup": {
     "welcome": "Welcome to your first setup of wg-easy",
@@ -137,7 +149,10 @@
     "sectionAdvanced": "Advanced",
     "noItems": "No items",
     "nullNoItems": "No items. Using global config",
-    "add": "Add"
+    "add": "Add",
+    "create": "Create",
+    "cancel": "Cancel",
+    "revoke": "Revoke"
   },
   "admin": {
     "general": {

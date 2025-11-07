@@ -111,6 +111,100 @@
             </div>
           </FormGroup>
         </FormElement>
+        <FormElement @submit.prevent>
+          <FormGroup>
+            <FormHeading>{{ $t('general.apiKeys') }}</FormHeading>
+            <div class="col-span-2 flex flex-col gap-4">
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                {{ $t('me.apiKeysDesc') }}
+              </p>
+              <div v-if="!showCreateApiKey" class="flex flex-col gap-2">
+                <FormSecondaryActionField
+                  :label="$t('me.createApiKey')"
+                  @click="showCreateApiKey = true"
+                />
+              </div>
+              <div v-if="showCreateApiKey" class="flex flex-col gap-2">
+                <FormTextField
+                  id="api-key-name"
+                  v-model="apiKeyName"
+                  :label="$t('me.apiKeyName')"
+                  :placeholder="$t('me.apiKeyNamePlaceholder')"
+                />
+                <div class="flex gap-2">
+                  <FormSecondaryActionField
+                    :label="$t('form.create')"
+                    @click="createApiKey"
+                  />
+                  <FormSecondaryActionField
+                    :label="$t('form.cancel')"
+                    @click="cancelCreateApiKey"
+                  />
+                </div>
+              </div>
+              <div
+                v-if="newApiKey"
+                class="rounded-md bg-yellow-50 p-4 dark:bg-yellow-900/20"
+              >
+                <p
+                  class="text-sm font-medium text-yellow-800 dark:text-yellow-200"
+                >
+                  {{ $t('me.apiKeyCreated') }}
+                </p>
+                <p class="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
+                  {{ $t('me.apiKeyCopyWarning') }}
+                </p>
+                <div class="mt-2">
+                  <FormTextField
+                    id="new-api-key"
+                    :model-value="newApiKey"
+                    :on-update:model-value="() => {}"
+                    :label="$t('me.apiKey')"
+                    :disabled="true"
+                  />
+                </div>
+              </div>
+              <div v-if="apiKeys.length > 0" class="mt-2 flex flex-col gap-2">
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ $t('me.existingApiKeys') }}
+                </p>
+                <div
+                  v-for="key in apiKeys"
+                  :key="key.id"
+                  class="flex items-center justify-between rounded-md border border-gray-300 p-3 dark:border-gray-600"
+                >
+                  <div class="flex flex-col">
+                    <span
+                      class="text-sm font-medium text-gray-900 dark:text-gray-100"
+                    >
+                      {{ key.name }}
+                    </span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ $t('me.createdAt') }}: {{ formatDate(key.createdAt) }}
+                    </span>
+                    <span
+                      v-if="key.lastUsedAt"
+                      class="text-xs text-gray-500 dark:text-gray-400"
+                    >
+                      {{ $t('me.lastUsedAt') }}:
+                      {{ formatDate(key.lastUsedAt) }}
+                    </span>
+                  </div>
+                  <FormSecondaryActionField
+                    :label="$t('form.revoke')"
+                    @click="revokeApiKey(key.id)"
+                  />
+                </div>
+              </div>
+              <div
+                v-else-if="!showCreateApiKey && !newApiKey"
+                class="text-sm text-gray-500 dark:text-gray-400"
+              >
+                {{ $t('me.noApiKeys') }}
+              </div>
+            </div>
+          </FormGroup>
+        </FormElement>
       </PanelBody>
     </Panel>
   </main>
@@ -242,5 +336,87 @@ async function disable2fa() {
     type: 'delete',
     currentPassword: disable2faPassword.value,
   });
+}
+
+// API Keys
+interface ApiKey {
+  id: number;
+  name: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+}
+
+const apiKeys = ref<ApiKey[]>([]);
+const showCreateApiKey = ref(false);
+const apiKeyName = ref('');
+const newApiKey = ref<string | null>(null);
+
+// Load API keys on mount
+onMounted(async () => {
+  await loadApiKeys();
+});
+
+async function loadApiKeys() {
+  try {
+    const response = await $fetch('/api/me/api-key', {
+      method: 'get',
+    });
+    apiKeys.value = response as ApiKey[];
+  } catch (error) {
+    console.error('Failed to load API keys:', error);
+  }
+}
+
+const _createApiKey = useSubmit(
+  `/api/me/api-key`,
+  {
+    method: 'post',
+  },
+  {
+    revert: async (success, data) => {
+      if (success && data) {
+        newApiKey.value = data.key;
+        apiKeyName.value = '';
+        showCreateApiKey.value = false;
+        await loadApiKeys();
+      }
+    },
+  }
+);
+
+async function createApiKey() {
+  if (!apiKeyName.value.trim()) {
+    return;
+  }
+  return _createApiKey({ name: apiKeyName.value });
+}
+
+function cancelCreateApiKey() {
+  showCreateApiKey.value = false;
+  apiKeyName.value = '';
+  newApiKey.value = null;
+}
+
+const _revokeApiKey = useSubmit(
+  (id: number) => `/api/me/api-key/${id}`,
+  {
+    method: 'delete',
+  },
+  {
+    revert: async (success) => {
+      if (success) {
+        await loadApiKeys();
+      }
+    },
+  }
+);
+
+async function revokeApiKey(id: number) {
+  return _revokeApiKey(id);
+}
+
+function formatDate(date: string) {
+  return new Date(date).toLocaleString();
 }
 </script>

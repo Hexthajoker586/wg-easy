@@ -47,18 +47,18 @@ export async function getCurrentUser(event: H3Event) {
   } else if (authorization) {
     // Handle if authenticating using Header
     const [method, value] = authorization.split(' ');
-    
+
     if (method === 'Bearer' && value) {
       // Support Bearer Token (API Key) Authentication
       const apiKey = await Database.apiKeys.validate(value);
-      
+
       if (!apiKey) {
         throw createError({
           statusCode: 401,
           statusMessage: 'Invalid or expired API key',
         });
       }
-      
+
       user = await Database.users.get(apiKey.userId);
     } else if (method === 'Basic' && value) {
       // Support Basic Authentication
