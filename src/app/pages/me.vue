@@ -398,22 +398,22 @@ function cancelCreateApiKey() {
   newApiKey.value = null;
 }
 
-const _revokeApiKey = useSubmit(
-  (id: number) => `/api/me/api-key/${id}`,
-  {
-    method: 'delete',
-  },
-  {
-    revert: async (success) => {
-      if (success) {
-        await loadApiKeys();
-      }
-    },
-  }
-);
-
 async function revokeApiKey(id: number) {
-  return _revokeApiKey(id);
+  try {
+    await $fetch(`/api/me/api-key/${id}`, {
+      method: 'delete',
+    });
+    await loadApiKeys();
+    useToast().showToast({
+      type: 'success',
+      message: 'API key revoked',
+    });
+  } catch {
+    useToast().showToast({
+      type: 'error',
+      message: 'Failed to revoke API key',
+    });
+  }
 }
 
 function formatDate(date: string) {
