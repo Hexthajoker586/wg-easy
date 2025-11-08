@@ -16,6 +16,22 @@ There is no documentation for the API yet, but this will be added as the underly
 To use the API, you need to authenticate using Basic Authentication. The username and password are the same as the ones you use to log in to the web application.
 If you use 2FA, the API will not work. You need to disable 2FA in the web application to use the API.
 
+### Rate Limiting
+
+To protect against brute force password attacks, the API implements rate limiting on authentication endpoints:
+
+- **Maximum Attempts**: 5 failed login attempts per IP address and username combination
+- **Time Window**: 15 minutes
+- **Lockout Duration**: 15 minutes after exceeding the maximum attempts
+- **Status Code**: HTTP 429 (Too Many Requests) when rate limited
+
+The rate limiting applies to both:
+
+- The `/api/session` login endpoint (web interface login)
+- Basic Authentication on API endpoints
+
+After 5 failed authentication attempts within a 15-minute window, the account will be temporarily locked for 15 minutes. Successful authentication resets the failed attempt counter.
+
 ### Authentication Example
 
 ```python
@@ -27,6 +43,8 @@ response = requests.get(url, auth=HTTPBasicAuth('username', 'password'))
 if response.status_code == 200:
     data = response.json()
     print(data)
+elif response.status_code == 429:
+    print(f"Rate limited: {response.json().get('statusMessage', 'Too many attempts')}")
 else:
     print(f"Error: {response.status_code}")
 ```
