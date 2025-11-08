@@ -70,11 +70,27 @@ export async function getCurrentUser(event: H3Event) {
       });
     }
 
+    // Get client IP for rate limiting
+    const clientIp = getRequestIP(event, { xForwardedFor: true }) || 'unknown';
+    const rateLimitKey = `${clientIp}:${username}:basicauth`;
+
+    // Check if rate limited
+    if (rateLimiter.isRateLimited(rateLimitKey)) {
+      const timeUntilUnlock = rateLimiter.getTimeUntilUnlock(rateLimitKey);
+      const minutesUntilUnlock = Math.ceil(timeUntilUnlock / 60000);
+
+      throw createError({
+        statusCode: 429,
+        statusMessage: `Too many failed authentication attempts. Please try again in ${minutesUntilUnlock} minute(s).`,
+      });
+    }
+
     // TODO: timing can be used to enumerate usernames
 
     const foundUser = await Database.users.getByUsername(username);
 
     if (!foundUser) {
+      rateLimiter.recordFailedAttempt(rateLimitKey);
       throw createError({
         statusCode: 401,
         statusMessage: 'Session failed',
@@ -85,11 +101,15 @@ export async function getCurrentUser(event: H3Event) {
     const passwordValid = await isPasswordValid(password, userHashPassword);
 
     if (!passwordValid) {
+      rateLimiter.recordFailedAttempt(rateLimitKey);
       throw createError({
         statusCode: 401,
         statusMessage: 'Session failed',
       });
     }
+
+    // Reset rate limit on successful authentication
+    rateLimiter.reset(rateLimitKey);
     user = foundUser;
   } else {
     throw createError({
